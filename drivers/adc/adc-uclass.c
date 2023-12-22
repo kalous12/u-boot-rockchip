@@ -7,6 +7,8 @@
 
 #include <common.h>
 #include <errno.h>
+#include <stdlib.h>
+#include <stdio.h>
 #include <dm.h>
 #include <dm/lists.h>
 #include <dm/device-internal.h>
@@ -411,9 +413,80 @@ static int adc_pre_probe(struct udevice *dev)
 	return 0;
 }
 
+
+static int do_rockchip_adc_read(cmd_tbl_t *cmdtp, int flag, int argc,
+			char *const argv[])
+{
+	int ret,channel;
+	u32 val; 
+	char adc_index[11];
+	char *board;
+	char *rk3588="evb_rk3588";
+	char *rk3568="evb_rk3568";
+	int adc_flag=0;
+	int index=10;
+	int i;
+	int rk3568_index[8]={229, 344, 460, 595, 732, 858, 975, 1024};
+	int rk3588_index[8]={916, 1376, 1840, 2380, 2928, 3432, 3900, 4096};
+
+	if (argc != 2) {
+		printf("argc=%d\n",argc);
+		return CMD_RET_USAGE;
+	}
+
+	channel=atoi(argv[1]);
+
+	ret = adc_channel_single_shot("saradc", channel, &val);
+	if (ret) {
+		printf("%s: Failed to read saradc, ret=%d\n", __func__, ret);
+		return 0;
+	}
+
+	board = env_get("board");
+	ret = strcmp(rk3588 , board);	
+	if(ret == 0){
+		printf("board is rk3588\n");
+		adc_flag=1;
+	}
+	else{
+		if(!strcmp(rk3568,board)){
+			printf("board is rk3588\n");
+			adc_flag=2;
+		}
+	}
+
+	for (i=0;i<8;i++){
+		if(adc_flag==1){
+			if(val < rk3588_index[i]){
+				index=i;
+				break;
+			}
+		}
+		if(adc_flag==2){
+			if(val < rk3568_index[i]){
+				index=i;
+				break;
+			}
+		}
+	}
+
+	char *str=simple_itoa(index);
+	sprintf(adc_index, "adc_index_%d", channel);
+	env_set(adc_index,str);	
+
+	printf("val=%d,index=%d\n",val,index);
+	return 0;
+}
+
 UCLASS_DRIVER(adc) = {
 	.id	= UCLASS_ADC,
 	.name	= "adc",
 	.pre_probe =  adc_pre_probe,
 	.per_device_platdata_auto_alloc_size = ADC_UCLASS_PLATDATA_SIZE,
 };
+
+U_BOOT_CMD(
+	adc_read, 2, 1, do_rockchip_adc_read,
+	"load and display log from resource partition",
+	NULL
+);
