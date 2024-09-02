@@ -77,7 +77,8 @@
 	"fdt_addr_r=0x08300000\0" \
 	"kernel_addr_r=0x00280000\0" \
 	"kernel_addr_c=0x04080000\0" \
-	"ramdisk_addr_r=0x0a200000\0"
+	"ramdisk_addr_r=0x0a200000\0" \
+	"logo_addr=0x00a00000\0" 
 
 #include <config_distro_bootcmd.h>
 
